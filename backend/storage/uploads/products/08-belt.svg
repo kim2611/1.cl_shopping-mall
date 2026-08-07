@@ -1,0 +1,13 @@
+<svg width="400" height="500" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="500" fill="#E6ECEC"/>
+  <rect x="8" y="8" width="384" height="484" fill="none" stroke="#C7D0D2" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="24" y="34" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" letter-spacing="1" fill="#9BA3AC">MALL — SPEC-P08</text>
+  <line x1="24" y1="44" x2="200" y2="44" stroke="#C7D0D2" stroke-width="1" stroke-dasharray="3 3"/>
+  <g transform="translate(0,10)">
+    <rect x="120" y="210" width="160" height="30" rx="2" fill="none" stroke="#14181C" stroke-width="3"/>
+    <rect x="185" y="203" width="30" height="44" rx="2" fill="none" stroke="#14181C" stroke-width="3"/>
+  </g>
+  <text x="24" y="440" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="16" font-weight="700" fill="#14181C">레더 벨트</text>
+  <text x="24" y="466" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#FF4D1C">28,000원</text>
+  <text x="376" y="484" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9BA3AC">SAMPLE</text>
+</svg>

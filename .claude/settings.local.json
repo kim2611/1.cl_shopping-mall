@@ -6,7 +6,8 @@
       "PowerShell(Test-NetConnection *)",
       "PowerShell(ssh -i \"$env:USERPROFILE\\\\.ssh\\\\shopping_mall_vm\" -p 2222 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 test@127.0.0.1 \"echo CONNECTED && whoami && hostname && uname -a\")",
       "PowerShell(java *)",
-      "PowerShell(winget install *)"
+      "PowerShell(winget install *)",
+      "WebSearch"
     ]
   }
 }

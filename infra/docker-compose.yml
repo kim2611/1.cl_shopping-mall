@@ -1,0 +1,52 @@
+name: shopping-mall
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shopping-mall-postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopping-mall-net
+
+  jenkins:
+    build:
+      context: ./jenkins
+      args:
+        DOCKER_GID: ${DOCKER_GID}
+    container_name: shopping-mall-jenkins
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${JENKINS_PORT}:8080"
+      - "${JENKINS_AGENT_PORT}:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - shopping-mall-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  shopping-mall-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  jenkins_home:
