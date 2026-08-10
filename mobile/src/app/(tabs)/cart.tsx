@@ -90,7 +90,7 @@ export default function CartScreen() {
               <ThemedText variant="h3">합계 ({cart.totalQuantity}개)</ThemedText>
               <ThemedText variant="price">{cart.totalAmount.toLocaleString('ko-KR')}원</ThemedText>
             </View>
-            <Button label="주문하기" variant="primary" onPress={() => {}} />
+            <Button label="주문하기" variant="primary" onPress={() => router.push('/checkout')} />
           </View>
         ) : null}
       </SafeAreaView>

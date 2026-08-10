@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +29,7 @@ export default function AccountScreen() {
               {account.email}
             </ThemedText>
             <View style={styles.actions}>
+              <Button label="주문 내역" variant="primary" onPress={() => router.push('/orders')} />
               <Button label="로그아웃" variant="secondary" onPress={logout} />
             </View>
           </View>
@@ -152,6 +153,8 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
+    gap: Spacing.md,
+    flexWrap: 'wrap',
   },
   form: {
     gap: Spacing.lg,

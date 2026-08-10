@@ -39,6 +39,9 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="product/[uuid]" options={{ title: '상품' }} />
           <Stack.Screen name="signup" options={{ title: '회원가입' }} />
+          <Stack.Screen name="checkout" options={{ title: '주문서' }} />
+          <Stack.Screen name="order/[orderNumber]" options={{ title: '주문 상세' }} />
+          <Stack.Screen name="orders" options={{ title: '주문 내역' }} />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>

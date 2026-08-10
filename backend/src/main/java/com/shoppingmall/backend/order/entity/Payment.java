@@ -1,7 +1,7 @@
-package com.shoppingmall.backend.catalog.entity;
+package com.shoppingmall.backend.order.entity;
 
 import java.math.BigDecimal;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 import com.shoppingmall.backend.common.entity.BaseEntity;
 
@@ -16,41 +16,33 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+/** 결제. amount는 최초 결제 금액 그대로 유지하고, 환불이 생겨도 수정하지 않는다(환불은 refunds 원장에 별도 기록). */
 @Entity
-@Table(name = "products")
+@Table(name = "payments")
 @Getter
 @NoArgsConstructor
 @SuperBuilder
-public class Product extends BaseEntity {
+public class Payment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(length = 17)
     private String id;
 
-    // 클라이언트에 노출하는 외부 공개 식별자 - 내부 id(코드+순번)는 절대 노출하지 않는다.
-    @Column(nullable = false, unique = true)
-    private UUID uuid;
+    @Column(name = "order_id", nullable = false, length = 17)
+    private String orderId;
 
-    @Column(name = "company_id", nullable = false, length = 17)
-    private String companyId;
-
-    @Column(name = "category_id", nullable = false, length = 17)
-    private String categoryId;
-
-    @Column(nullable = false, length = 200)
-    private String name;
-
-    private String description;
+    @Column(name = "method_code_id", nullable = false, length = 17)
+    private String methodCodeId;
 
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal price;
-
-    @Setter
-    @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity;
+    private BigDecimal amount;
 
     @Setter
     @Column(name = "status_code_id", nullable = false, length = 17)
     private String statusCodeId;
+
+    @Setter
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 }

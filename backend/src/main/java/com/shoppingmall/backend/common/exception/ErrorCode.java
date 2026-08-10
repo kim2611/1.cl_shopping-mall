@@ -13,6 +13,7 @@ public enum ErrorCode {
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 가입된 이메일입니다."),
     NOT_A_SHOPPER(HttpStatus.FORBIDDEN, "일반 회원 계정만 장바구니를 사용할 수 있습니다."),
     OUT_OF_STOCK(HttpStatus.CONFLICT, "재고가 부족합니다."),
+    EMPTY_CART(HttpStatus.BAD_REQUEST, "장바구니가 비어 있어 주문할 수 없습니다."),
     VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "입력값을 확인해주세요."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "일시적인 오류가 발생했습니다.");

@@ -30,6 +30,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, String> {
 
     Optional<CartItem> findByIdAndCartIdAndDelYn(String id, String cartId, String delYn);
 
+    List<CartItem> findByCartIdAndDelYnOrderByCreatedAtAsc(String cartId, String delYn);
+
     Optional<CartItem> findByCartIdAndProductIdAndOptionCombinationIdAndDelYn(
             String cartId, String productId, String optionCombinationId, String delYn);
 
