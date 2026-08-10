@@ -636,6 +636,7 @@ CREATE TABLE orders (
     address1         VARCHAR(200)  NOT NULL,
     address2         VARCHAR(200),
     order_number     VARCHAR(50)   NOT NULL UNIQUE,
+    idempotency_key  VARCHAR(64), -- 주문 생성 요청의 멱등 키(클라이언트 생성). 더블탭/재시도로 주문이 두 번 생기는 걸 막는다. 미전달 시 NULL
     status_code_id   VARCHAR(17)   NOT NULL REFERENCES common_codes(id), -- code_group='ORDER_STATUS' (배송 자체의 상세 상태/이력은 deliveries/delivery_status_histories 참고)
     total_amount     NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0), -- 상품금액 합 - discount_amount + 배송비 합(deliveries.delivery_fee 전체 합) = 결제 총액
     discount_amount  NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0), -- 적용된 쿠폰 할인액 스냅샷 (어떤 쿠폰인지는 account_coupons.used_order_id로 역참조)
@@ -647,6 +648,9 @@ CREATE TABLE orders (
     updated_by    VARCHAR(50),
     updated_at    TIMESTAMP
 );
+-- 같은 계정이 같은 멱등 키로 주문을 두 번 만들 수 없게 강제 (경합 시 늦은 쪽이 여기 걸린다)
+CREATE UNIQUE INDEX ux_orders_account_idempotency ON orders (account_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL AND del_yn = 'N';
 
 -- 주문 항목 (주문 시점 가격 스냅샷)
 CREATE TABLE order_items (

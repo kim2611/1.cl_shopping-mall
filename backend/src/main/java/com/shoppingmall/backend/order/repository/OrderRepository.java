@@ -16,6 +16,8 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 
     Optional<Order> findByOrderNumberAndDelYn(String orderNumber, String delYn);
 
+    Optional<Order> findByAccountIdAndIdempotencyKeyAndDelYn(String accountId, String idempotencyKey, String delYn);
+
     Page<Order> findByDelYnOrderByOrderedAtDesc(String delYn, Pageable pageable);
 
     long countByDelYn(String delYn);

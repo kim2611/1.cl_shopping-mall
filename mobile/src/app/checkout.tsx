@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -21,7 +22,12 @@ type CheckoutForm = {
 export default function CheckoutScreen() {
   const theme = useTheme();
   const { data: cart } = useCart();
-  const createOrder = useCreateOrder();
+  // 주문서 화면에 들어올 때 한 번만 만든다 - 같은 화면에서 재시도하면 같은 키라 주문이 중복 생성되지 않고,
+  // 주문서에 새로 들어오면 새 키가 되어 새 주문이 정상적으로 만들어진다.
+  const [idempotencyKey] = useState(
+    () => `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  );
+  const createOrder = useCreateOrder(idempotencyKey);
   const { control, handleSubmit, formState } = useForm<CheckoutForm>({
     defaultValues: { recipientName: '', phone: '', zipCode: '', address1: '', address2: '' },
   });

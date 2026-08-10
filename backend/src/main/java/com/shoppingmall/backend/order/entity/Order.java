@@ -56,6 +56,10 @@ public class Order extends BaseEntity {
     @Column(name = "order_number", nullable = false, length = 50)
     private String orderNumber;
 
+    /** 주문 생성 요청의 멱등 키. 같은 계정+같은 키는 DB 부분 유니크 인덱스로 한 건만 허용된다. */
+    @Column(name = "idempotency_key", length = 64)
+    private String idempotencyKey;
+
     @Setter
     @Column(name = "status_code_id", nullable = false, length = 17)
     private String statusCodeId;

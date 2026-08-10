@@ -9,12 +9,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.shoppingmall.backend.order.dto.CreateOrderRequest;
 import com.shoppingmall.backend.order.dto.OrderResponse;
 import com.shoppingmall.backend.order.dto.OrderSummaryResponse;
+import com.shoppingmall.backend.order.service.OrderCheckoutService;
 import com.shoppingmall.backend.order.service.OrderService;
 
 import jakarta.validation.Valid;
@@ -25,16 +27,24 @@ import jakarta.validation.Valid;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderCheckoutService orderCheckoutService;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, OrderCheckoutService orderCheckoutService) {
         this.orderService = orderService;
+        this.orderCheckoutService = orderCheckoutService;
     }
 
+    /**
+     * Idempotency-Key 헤더를 보내면 같은 키의 재요청은 주문을 새로 만들지 않고 처음 만든 주문을 그대로 돌려준다
+     * (버튼 더블탭/네트워크 재시도 대비). 헤더가 없으면 기존처럼 매번 새 주문이 생긴다.
+     */
     @PostMapping
     public ResponseEntity<OrderResponse> create(
-            Authentication authentication, @Valid @RequestBody CreateOrderRequest request) {
+            Authentication authentication,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody CreateOrderRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orderService.createOrder(authentication.getName(), request));
+                .body(orderCheckoutService.checkout(authentication.getName(), idempotencyKey, request));
     }
 
     @GetMapping

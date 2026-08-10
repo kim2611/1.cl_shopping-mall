@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +100,7 @@ public class OrderService {
      * 중간에 하나라도 실패하면 전부 롤백된다(재고만 깎이고 주문은 없는 상태가 생기지 않도록).
      */
     @Transactional
-    public OrderResponse createOrder(String accountId, CreateOrderRequest request) {
+    public OrderResponse createOrder(String accountId, String idempotencyKey, CreateOrderRequest request) {
         Cart cart = cartRepository.findByAccountIdAndDelYn(accountId, "N")
                 .orElseThrow(() -> new ApiException(ErrorCode.EMPTY_CART));
         List<CartItem> cartItems = cartItemRepository.findByCartIdAndDelYnOrderByCreatedAtAsc(cart.getId(), "N");
@@ -116,12 +117,15 @@ public class OrderService {
                 .address1(request.address1())
                 .address2(request.address2())
                 .orderNumber(generateOrderNumber())
+                .idempotencyKey(idempotencyKey)
                 .statusCodeId(codes.requireId("ORDER_STATUS", "ORST0002")) // 결제완료
                 .totalAmount(BigDecimal.ZERO) // 배송비까지 계산한 뒤 아래에서 확정
                 .discountAmount(BigDecimal.ZERO)
                 .orderedAt(LocalDateTime.now())
                 .createdBy(accountId)
                 .build());
+        // 멱등 키 중복은 이 시점에 DB 유니크 인덱스가 잡아야 하므로, 뒤 작업을 하기 전에 먼저 반영한다.
+        orderRepository.flush();
 
         String stockDecreaseCodeId = codes.requireId("STOCK_CHANGE_TYPE", "STCT0003"); // 주문차감
 
@@ -130,8 +134,15 @@ public class OrderService {
         Map<String, List<OrderItem>> itemsByCompany = new LinkedHashMap<>();
         Map<String, BigDecimal> amountByCompany = new LinkedHashMap<>();
 
-        for (CartItem cartItem : cartItems) {
-            Product product = productRepository.findById(cartItem.getProductId())
+        // 상품 ID 순으로 정렬해서 잠근다 - 두 주문이 같은 상품 두 개를 서로 반대 순서로 잠그면
+        // 데드락이 나므로, 모든 트랜잭션이 항상 같은 순서로 락을 잡게 한다.
+        List<CartItem> lockOrderedItems = cartItems.stream()
+                .sorted(Comparator.comparing(CartItem::getProductId))
+                .toList();
+
+        for (CartItem cartItem : lockOrderedItems) {
+            // 행 잠금 조회 - 재고 검사와 차감 사이에 다른 주문이 끼어들지 못하게 한다.
+            Product product = productRepository.findForStockUpdate(cartItem.getProductId())
                     .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "상품을 찾을 수 없습니다."));
 
             if (product.getStockQuantity() < cartItem.getQuantity()) {

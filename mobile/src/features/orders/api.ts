@@ -63,9 +63,18 @@ async function request<T>(path: string, accessToken: string, init?: RequestInit)
   return res.json();
 }
 
-export function createOrder(accessToken: string, payload: CreateOrderPayload): Promise<Order> {
+/**
+ * idempotencyKey를 함께 보내면 같은 키의 재요청은 주문을 새로 만들지 않고 처음 만든 주문을 돌려받는다.
+ * (결제 버튼 더블탭, 응답을 못 받고 재시도하는 경우에 주문이 두 건 생기는 걸 막는다.)
+ */
+export function createOrder(
+  accessToken: string,
+  payload: CreateOrderPayload,
+  idempotencyKey: string
+): Promise<Order> {
   return request<Order>('/api/orders', accessToken, {
     method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify(payload),
   });
 }
