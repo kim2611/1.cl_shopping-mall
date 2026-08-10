@@ -20,6 +20,14 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="cart">
+        <NativeTabs.Trigger.Label>장바구니</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/explore.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="styleguide">
         <NativeTabs.Trigger.Label>스타일 가이드</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

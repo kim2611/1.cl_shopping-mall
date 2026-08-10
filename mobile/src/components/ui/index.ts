@@ -5,3 +5,4 @@ export { ProductCard, type ProductCardProps } from './product-card';
 export { OrderSummary } from './order-summary';
 export { Table, type TableColumn } from './table';
 export { SortBar, type SortOption } from './sort-bar';
+export { QuantityStepper } from './quantity-stepper';

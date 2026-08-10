@@ -211,7 +211,7 @@ CREATE TABLE accounts (
 CREATE TABLE account_emails (
     id          VARCHAR(17)  PRIMARY KEY DEFAULT ('EMAL' || LPAD(NEXTVAL('SEQ_ACCOUNT_EMAILS_01')::TEXT, 13, '0')),
     account_id  VARCHAR(17)  NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    email       VARCHAR(100) NOT NULL UNIQUE,
+    email       VARCHAR(100) NOT NULL, -- 유일성은 아래 ux_account_emails_email 부분 인덱스로 (소프트 삭제 고려)
     primary_yn  CHAR(1)      NOT NULL DEFAULT 'N' CHECK (primary_yn IN ('Y','N')),
 
     del_yn      CHAR(1)      NOT NULL DEFAULT 'N' CHECK (del_yn IN ('Y','N')),
@@ -220,8 +220,9 @@ CREATE TABLE account_emails (
     updated_by  VARCHAR(50),
     updated_at  TIMESTAMP
 );
+CREATE UNIQUE INDEX ux_account_emails_email ON account_emails (email) WHERE del_yn = 'N';
 -- 계정당 대표 이메일은 최대 1개로 강제 (부분 유니크 인덱스)
-CREATE UNIQUE INDEX ux_account_emails_primary ON account_emails(account_id) WHERE primary_yn = 'Y';
+CREATE UNIQUE INDEX ux_account_emails_primary ON account_emails(account_id) WHERE primary_yn = 'Y' AND del_yn = 'N';
 
 -- 로그인 시도 이력 (보안 로그) - 성공/실패 모두 기록
 CREATE TABLE account_login_histories (
@@ -306,7 +307,7 @@ CREATE TABLE companies (
 -- settlements.commission_amount = total_sales_amount * (해당 회사 grade_code_id의 commission_rate / 100) 로 계산하는 것을 기본 공식으로 함.
 CREATE TABLE company_grade_policies (
     id                    VARCHAR(17)  PRIMARY KEY DEFAULT ('CGPL' || LPAD(NEXTVAL('SEQ_COMPANY_GRADE_POLICIES_01')::TEXT, 13, '0')),
-    grade_code_id         VARCHAR(17)  NOT NULL UNIQUE REFERENCES common_codes(id), -- code_group='COMPANY_GRADE'
+    grade_code_id         VARCHAR(17)  NOT NULL REFERENCES common_codes(id), -- code_group='COMPANY_GRADE'. 유일성은 아래 ux_company_grade_policies_grade로
     commission_rate       NUMERIC(5,2) NOT NULL CHECK (commission_rate BETWEEN 0 AND 100), -- %
     benefit_description   VARCHAR(300),
 
@@ -316,12 +317,13 @@ CREATE TABLE company_grade_policies (
     updated_by  VARCHAR(50),
     updated_at  TIMESTAMP
 );
+CREATE UNIQUE INDEX ux_company_grade_policies_grade ON company_grade_policies (grade_code_id) WHERE del_yn = 'N';
 
 -- 회사 배송비 정책 (회사당 1건 - 기본 배송비/무료배송 조건/도서산간 추가배송비).
 -- 실제 주문에 청구된 배송비는 deliveries.delivery_fee에 스냅샷으로 남는다(정책이 바뀌어도 과거 배송엔 영향 없음).
 CREATE TABLE company_shipping_policies (
     id                        VARCHAR(17)   PRIMARY KEY DEFAULT ('CSHP' || LPAD(NEXTVAL('SEQ_COMPANY_SHIPPING_POLICIES_01')::TEXT, 13, '0')),
-    company_id                VARCHAR(17)   NOT NULL UNIQUE REFERENCES companies(id) ON DELETE CASCADE,
+    company_id                VARCHAR(17)   NOT NULL REFERENCES companies(id) ON DELETE CASCADE, -- 유일성은 아래 ux_company_shipping_policies_company로
     base_fee                  NUMERIC(10,2) NOT NULL DEFAULT 3000 CHECK (base_fee >= 0), -- 기본 배송비 (1차 기본값 3,000원 - 회사가 개별 조정 가능)
     free_shipping_threshold   NUMERIC(12,2) DEFAULT 30000 CHECK (free_shipping_threshold IS NULL OR free_shipping_threshold >= 0), -- 이 금액 이상 무료배송 (1차 기본값 30,000원). 무료배송 미제공 회사는 NULL로 명시적 변경
     remote_area_extra_fee     NUMERIC(10,2) NOT NULL DEFAULT 3000 CHECK (remote_area_extra_fee >= 0), -- 제주/도서산간 등 추가배송비 (1차 기본값 3,000원)
@@ -332,6 +334,7 @@ CREATE TABLE company_shipping_policies (
     updated_by  VARCHAR(50),
     updated_at  TIMESTAMP
 );
+CREATE UNIQUE INDEX ux_company_shipping_policies_company ON company_shipping_policies (company_id) WHERE del_yn = 'N';
 
 -- 회사 직책. 이름은 회사가 자유롭게 정의(예: '대표', 'MD', '배송담당') - 같은 이름이라도 회사가
 -- 다르면 완전히 다른 행. 실제 시스템 권한 종류(company_role_permissions가 참조하는 공통코드)는
@@ -346,9 +349,10 @@ CREATE TABLE company_roles (
     created_by  VARCHAR(50)  NOT NULL,
     created_at  TIMESTAMP    NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (company_id, role_name)
+    updated_at  TIMESTAMP
+    -- UNIQUE(company_id, role_name)는 아래 부분 유니크 인덱스로 대체 (소프트 삭제된 행이 슬롯을 점유하지 않도록)
 );
+CREATE UNIQUE INDEX ux_company_roles_company_name ON company_roles (company_id, role_name) WHERE del_yn = 'N';
 
 -- 직책-권한 연결 (다대다). 권한 "종류" 자체는 COMPANY_PERMISSION 공통코드로 시스템에 고정된 목록.
 CREATE TABLE company_role_permissions (
@@ -360,9 +364,10 @@ CREATE TABLE company_role_permissions (
     created_by  VARCHAR(50) NOT NULL,
     created_at  TIMESTAMP   NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (role_id, permission_code_id)
+    updated_at  TIMESTAMP
+    -- UNIQUE(role_id, permission_code_id)는 아래 부분 유니크 인덱스로 대체
 );
+CREATE UNIQUE INDEX ux_company_role_permissions_role_permission ON company_role_permissions (role_id, permission_code_id) WHERE del_yn = 'N';
 
 -- 계정-회사-직책 연결 (다대다 핵심). account_id가 general_accounts를 참조하므로 관리자는 회사에
 -- 소속될 수 없다(DB가 강제). company_id가 다르면 같은 account_id가 여러 행에 나타날 수 있어
@@ -378,9 +383,10 @@ CREATE TABLE company_members (
     created_by  VARCHAR(50) NOT NULL,
     created_at  TIMESTAMP   NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (company_id, account_id)
+    updated_at  TIMESTAMP
+    -- UNIQUE(company_id, account_id)는 아래 부분 유니크 인덱스로 대체 (탈퇴 후 재합류 가능하도록)
 );
+CREATE UNIQUE INDEX ux_company_members_company_account ON company_members (company_id, account_id) WHERE del_yn = 'N';
 
 -- 회사 대표자 변경 신청. companies.owner_account_id를 직접 UPDATE하지 않고 이 절차(접수->검토중
 -- ->승인/반려)를 거치도록 애플리케이션에서 강제한다 - 의도적으로 번거롭게 만들어 오남용/분쟁을 줄임.
@@ -421,7 +427,7 @@ CREATE TABLE addresses (
     updated_at      TIMESTAMP
 );
 -- 계정당 기본 배송지는 최대 1개로 강제 (부분 유니크 인덱스, account_emails.primary_yn과 동일 패턴)
-CREATE UNIQUE INDEX ux_addresses_default ON addresses(account_id) WHERE default_yn = 'Y';
+CREATE UNIQUE INDEX ux_addresses_default ON addresses(account_id) WHERE default_yn = 'Y' AND del_yn = 'N';
 
 -- 카테고리 (self-reference로 대/중/소 분류 지원)
 CREATE TABLE categories (
@@ -487,11 +493,12 @@ CREATE TABLE product_files (
     created_by  VARCHAR(50)  NOT NULL,
     created_at  TIMESTAMP  NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (product_id, file_id)
+    updated_at  TIMESTAMP
+    -- UNIQUE(product_id, file_id)는 아래 부분 유니크 인덱스로 대체
 );
+CREATE UNIQUE INDEX ux_product_files_product_file ON product_files (product_id, file_id) WHERE del_yn = 'N';
 -- 상품당 대표이미지는 최대 1개
-CREATE UNIQUE INDEX ux_product_files_thumbnail ON product_files(product_id) WHERE thumbnail_yn = 'Y';
+CREATE UNIQUE INDEX ux_product_files_thumbnail ON product_files(product_id) WHERE thumbnail_yn = 'Y' AND del_yn = 'N';
 
 -- 상품 옵션 축 (예: '사이즈', '색상' - 상품마다 0개 이상)
 -- selection_type_code_id: 이 축을 반드시 골라야 하는지(필수) 아닌지(선택) - 축 단위 속성
@@ -552,9 +559,10 @@ CREATE TABLE product_option_combination_values (
     created_by  VARCHAR(50) NOT NULL,
     created_at  TIMESTAMP   NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (combination_id, product_option_value_id)
+    updated_at  TIMESTAMP
+    -- UNIQUE(combination_id, product_option_value_id)는 아래 부분 유니크 인덱스로 대체
 );
+CREATE UNIQUE INDEX ux_poc_values_combination_value ON product_option_combination_values (combination_id, product_option_value_id) WHERE del_yn = 'N';
 
 -- 상품 스펙/속성 (구매 옵션이 아닌 단순 표시용 정보 - 예: 소재, 원산지, 제조사).
 -- product_options와의 차이: 이건 고객이 "선택"하지 않고 그냥 "보여지기만" 하는 정보라 재고/가격에 영향 없음.
@@ -582,14 +590,15 @@ CREATE TABLE wishlists (
     created_by  VARCHAR(50) NOT NULL,
     created_at  TIMESTAMP   NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (account_id, product_id)
+    updated_at  TIMESTAMP
+    -- UNIQUE(account_id, product_id)는 아래 부분 유니크 인덱스로 대체 (찜 해제 후 재찜 가능하도록)
 );
+CREATE UNIQUE INDEX ux_wishlists_account_product ON wishlists (account_id, product_id) WHERE del_yn = 'N';
 
 -- 장바구니 (계정당 1개)
 CREATE TABLE carts (
     id          VARCHAR(17) PRIMARY KEY DEFAULT ('CART' || LPAD(NEXTVAL('SEQ_CARTS_01')::TEXT, 13, '0')),
-    account_id  VARCHAR(17) NOT NULL UNIQUE REFERENCES general_accounts(account_id) ON DELETE CASCADE,
+    account_id  VARCHAR(17) NOT NULL REFERENCES general_accounts(account_id) ON DELETE CASCADE, -- 유일성은 아래 ux_carts_account로
 
     del_yn      CHAR(1)     NOT NULL DEFAULT 'N' CHECK (del_yn IN ('Y','N')),
     created_by  VARCHAR(50) NOT NULL,
@@ -597,6 +606,7 @@ CREATE TABLE carts (
     updated_by  VARCHAR(50),
     updated_at  TIMESTAMP
 );
+CREATE UNIQUE INDEX ux_carts_account ON carts (account_id) WHERE del_yn = 'N';
 
 -- 장바구니 항목
 CREATE TABLE cart_items (
@@ -613,7 +623,7 @@ CREATE TABLE cart_items (
     updated_at  TIMESTAMP
 );
 -- 같은 상품+옵션조합은 장바구니에 한 줄만 존재 (옵션 없는 상품도 COALESCE로 동일하게 강제)
-CREATE UNIQUE INDEX ux_cart_items_product_option ON cart_items (cart_id, product_id, COALESCE(option_combination_id, 'NONE'));
+CREATE UNIQUE INDEX ux_cart_items_product_option ON cart_items (cart_id, product_id, COALESCE(option_combination_id, 'NONE')) WHERE del_yn = 'N';
 
 -- 주문 (계정이 생성)
 CREATE TABLE orders (
@@ -979,9 +989,10 @@ CREATE TABLE admin_permissions (
     created_by  VARCHAR(50) NOT NULL,
     created_at  TIMESTAMP   NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (admin_id, permission_code_id)
+    updated_at  TIMESTAMP
+    -- UNIQUE(admin_id, permission_code_id)는 아래 부분 유니크 인덱스로 대체
 );
+CREATE UNIQUE INDEX ux_admin_permissions_admin_permission ON admin_permissions (admin_id, permission_code_id) WHERE del_yn = 'N';
 
 -- 좋아요/싫어요 개별 투표 기록 - board_posts/comments/reviews.like_count·dislike_count는
 -- 조회 성능을 위한 집계 컬럼이고(애플리케이션이 이 테이블 변경에 맞춰 증감), 실제 "누가 눌렀는지"와
@@ -1002,9 +1013,9 @@ CREATE TABLE reactions (
     CHECK (num_nonnulls(post_id, comment_id, review_id) = 1)
 );
 -- 대상별로 계정당 반응 1개만 (좋아요<->싫어요 전환은 UPDATE, 취소는 DELETE)
-CREATE UNIQUE INDEX ux_reactions_post ON reactions (post_id, account_id) WHERE post_id IS NOT NULL;
-CREATE UNIQUE INDEX ux_reactions_comment ON reactions (comment_id, account_id) WHERE comment_id IS NOT NULL;
-CREATE UNIQUE INDEX ux_reactions_review ON reactions (review_id, account_id) WHERE review_id IS NOT NULL;
+CREATE UNIQUE INDEX ux_reactions_post ON reactions (post_id, account_id) WHERE post_id IS NOT NULL AND del_yn = 'N';
+CREATE UNIQUE INDEX ux_reactions_comment ON reactions (comment_id, account_id) WHERE comment_id IS NOT NULL AND del_yn = 'N';
+CREATE UNIQUE INDEX ux_reactions_review ON reactions (review_id, account_id) WHERE review_id IS NOT NULL AND del_yn = 'N';
 
 -- ============================================================
 -- 알림 / 배너 / 감사로그
@@ -1046,9 +1057,10 @@ CREATE TABLE notification_settings (
     created_by  VARCHAR(50) NOT NULL,
     created_at  TIMESTAMP   NOT NULL DEFAULT now(),
     updated_by  VARCHAR(50),
-    updated_at  TIMESTAMP,
-    UNIQUE (account_id, notification_type_code_id)
+    updated_at  TIMESTAMP
+    -- UNIQUE(account_id, notification_type_code_id)는 아래 부분 유니크 인덱스로 대체
 );
+CREATE UNIQUE INDEX ux_notification_settings_account_type ON notification_settings (account_id, notification_type_code_id) WHERE del_yn = 'N';
 
 -- 메인 배너 / 기획전 노출 관리
 CREATE TABLE banners (

@@ -1,6 +1,6 @@
 # ERD / 스키마 설계
 
-> 상태: **1차 완성판** (13차 라운드까지 반영 — 환불 테이블 신설 + 유사 스냅샷 누락 2건 수정) → 사용자 검토 대기, 아직 실제 DB에는 미적용
+> 상태: **1차 완성판** (14차 라운드까지 반영 — 소프트 삭제 vs UNIQUE 충돌 일괄 수정) → **실제 DB에 적용됨** (Flyway `V1`~`V3`, `backend/src/main/resources/db/migration/`)
 
 ## 전 테이블 공통 규칙 (프로젝트 표준)
 - PK 필수
@@ -318,6 +318,15 @@ companies (business_name, business_reg_no, bank_account_no, approval_status_code
 - **[유사 사례 2] `settlements`에 `bank_name`/`bank_account_no` 스냅샷 추가**: 정산 지급 계좌 정보를 `companies.bank_account_no`에서 매번 실시간으로 가져오고 있었다 — 정산 완료 후 회사가 계좌를 바꾸면 "그때 실제로 어느 계좌로 지급했는지" 기록이 사라지는 회계 감사 리스크라 정산 생성 시점 스냅샷 컬럼을 추가했다.
 - 검토했지만 문제없다고 판단해 그대로 둔 것들: `orders.discount_amount`(이미 스칼라 스냅샷), `deliveries.delivery_fee`(이미 스냅샷), `notifications`/`admin_activity_logs`의 target_id 느슨한 참조(의도된 예외, 로그 성격이라 무결성보다 유연성이 중요), `carts`/`cart_items`/`wishlists`(현재 상태를 보여줘야 하는 게 맞는 라이브 데이터라 스냅샷 대상 아님).
 - 테이블 수 54 → **55개**(시퀀스 52개)로 증가. 새 공통코드 그룹 `REFUND_METHOD`/`REFUND_STATUS` 시드 예시 추가.
+
+## 14차 라운드 — 소프트 삭제와 UNIQUE 제약의 충돌 일괄 수정 (2026-08-10)
+장바구니 기능을 만들다가 실제로 터진 버그에서 출발했다. 장바구니에서 상품을 뺀 뒤(`del_yn='Y'`) 같은 상품을 다시 담으면 `ux_cart_items_product_option` 위반으로 500이 났다.
+
+**원인(구조적 문제)**: 이 프로젝트는 전 테이블에서 물리 삭제 대신 `del_yn` 소프트 삭제를 쓰는데, 지금까지 만든 UNIQUE 제약/인덱스는 `del_yn`을 전혀 고려하지 않았다. 그래서 **소프트 삭제된 행이 UNIQUE 슬롯을 영구히 점유**하고, "지웠다가 다시 추가"가 불가능해진다. 장바구니뿐 아니라 같은 유형의 제약 전부가 동일한 잠재 버그였다 — 12·13차 때의 "스냅샷 누락"과 같은 성격의, 한 곳에서 발견하면 전체를 훑어야 하는 문제.
+
+- **부분 유니크 인덱스로 교체(17건)**: `WHERE del_yn = 'N'`을 붙여 "활성 행 중에서만 유일"이라는 원래 의도를 정확히 표현하도록 바꿨다. 대상 — 장바구니 항목/장바구니, 이메일(값·대표), 기본 배송지, 상품 이미지(연결·대표), 좋아요/싫어요 3종, 찜, 회사 직원, 회사 직책, 직책 권한, 관리자 권한, 회사 등급/배송 정책, 옵션조합-옵션값, 알림 설정.
+- **일부러 그대로 둔 것(엄격 유지)**: `orders.order_number`, `products.uuid`, `board_posts.uuid`, `coupons.code`(재사용되면 안 되는 식별자), `payments.order_id`, `deliveries(order_id, company_id)`(지나간 거래·배송 기록), `settlements(회사,기간)`, `settlement_items.order_item_id`(이중 정산 방지), `account_coupons(coupon_id, account_id)`(**"계정당 1회"가 규칙 자체라, 소프트 삭제로 재발급이 뚫리면 악용됨**), `account_terms_agreements`(법적 동의 기록), `common_codes(code_group, code)`·`terms(type, version)`(영구 식별자), `companies.business_reg_no`(실제 사업자 식별값).
+- **적용/검증**: Flyway `V3__soft_delete_aware_unique_indexes.sql`로 기존 DB에 적용하고, `schema.sql`(신규 설치용 원본)도 같은 내용으로 갱신했다. 두 경로가 어긋나지 않았는지 확인하려고 **빈 DB에 `schema.sql`을 통째로 적용해 실제 운영 DB와 UNIQUE 인덱스 목록을 비교** — Flyway 자체 테이블(`flyway_schema_history`)을 빼면 완전히 동일함을 확인했다.
 
 ## 참고
 - DB 연결: `jdbc:postgresql://127.0.0.1:5432/shopping_mall` (VM Postgres, 포트포워딩 완료)
