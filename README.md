@@ -10,9 +10,13 @@
 cd backend && ./gradlew bootRun
 # → http://localhost:8090/docs (Swagger UI), 테스트 로그인: admin@mall.test / Mall!2026
 
-# 모바일 앱
+# 모바일 앱 (구매자용)
 cd mobile && npm install && npx expo start --web
 # → http://localhost:8081
+
+# 관리자 콘솔 (웹)
+cd frontend && npm install && npx next dev --port 3100
+# → http://localhost:3100 (admin@mall.test / Mall!2026)
 ```
 
 ## 새 머신에서 처음부터 세팅하는 경우
@@ -25,7 +29,7 @@ VirtualBox + Ubuntu VM만 있는 상태에서 전체 개발 환경을 재현하�
 | 폴더 | 내용 |
 |---|---|
 | `backend/` | Spring Boot API (Java 21, Gradle, PostgreSQL, JWT 인증) |
-| `frontend/` | Next.js 웹 (스캐폴딩만, 아직 미착수) |
+| `frontend/` | Next.js 관리자 콘솔 (대시보드/주문 관리/상품 관리) |
 | `mobile/` | Expo(React Native) 앱 — 진행 중 |
 | `document/` | 기획/요구사항/설계(ERD)/개발로그/테스트/배포운영 문서 |
 | `infra/` | 로컬 개발 인프라(PostgreSQL + Jenkins) Docker Compose 정의 |

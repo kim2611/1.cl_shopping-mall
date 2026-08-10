@@ -16,6 +16,12 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 
     Optional<Product> findByUuidAndDelYn(UUID uuid, String delYn);
 
+    Page<Product> findByDelYnOrderByCreatedAtDesc(String delYn, Pageable pageable);
+
+    long countByDelYn(String delYn);
+
+    long countByDelYnAndStockQuantityLessThan(String delYn, Integer threshold);
+
     @Query("""
             select new com.shoppingmall.backend.catalog.dto.ProductListRow(p.uuid, p.name, p.price, f.storedPath)
             from Product p

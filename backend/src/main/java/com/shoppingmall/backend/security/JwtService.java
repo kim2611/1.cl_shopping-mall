@@ -31,19 +31,23 @@ public class JwtService {
         this.refreshTokenDays = refreshTokenDays;
     }
 
-    public String issueAccessToken(String accountId, String accountType) {
-        return issue(accountId, accountType, "access", accessTokenMinutes, ChronoUnit.MINUTES);
+    /**
+     * role은 "ADMIN" / "GENERAL" 같은 의미 있는 값을 넣는다. 예전에는 common_codes.id(예: CCOD000...1)를
+     * 그대로 넣었는데, 그러면 권한 검사에서 쓸 수 없는 불투명한 값이라 관리자 API를 막을 수 없었다.
+     */
+    public String issueAccessToken(String accountId, String role) {
+        return issue(accountId, role, "access", accessTokenMinutes, ChronoUnit.MINUTES);
     }
 
-    public String issueRefreshToken(String accountId, String accountType) {
-        return issue(accountId, accountType, "refresh", refreshTokenDays, ChronoUnit.DAYS);
+    public String issueRefreshToken(String accountId, String role) {
+        return issue(accountId, role, "refresh", refreshTokenDays, ChronoUnit.DAYS);
     }
 
-    private String issue(String accountId, String accountType, String tokenType, long amount, ChronoUnit unit) {
+    private String issue(String accountId, String role, String tokenType, long amount, ChronoUnit unit) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(accountId)
-                .claim("accountType", accountType)
+                .claim("role", role)
                 .claim("tokenType", tokenType)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(amount, unit)))

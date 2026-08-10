@@ -43,6 +43,7 @@ public class Product extends BaseEntity {
 
     private String description;
 
+    @Setter
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 

@@ -42,9 +42,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.parse(header.substring(7));
                 if ("access".equals(claims.get("tokenType", String.class))) {
                     String accountId = claims.getSubject();
-                    String accountType = claims.get("accountType", String.class);
+                    String role = claims.get("role", String.class);
 
-                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + accountType));
+                    // role 클레임이 없는 옛 토큰은 일반 회원으로 간주 (관리자 권한은 주지 않음)
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + (role == null ? "GENERAL" : role)));
                     var authentication = new UsernamePasswordAuthenticationToken(accountId, null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }

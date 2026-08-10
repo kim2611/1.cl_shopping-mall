@@ -1,26 +1,32 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * MALL 디자인 토큰 - 모바일 앱(mobile/src/constants/theme.ts)과 같은 값.
+ * "테크팩 스펙시트" 방향: 색은 accent(오렌지) 1곳 + stamp(빨강, 경고/에러 전용) 1곳으로 제한.
+ */
+@theme {
+  --color-ink: #14181c;
+  --color-ink-soft: #5c6570;
+  --color-ink-faint: #9ba3ac;
+  --color-paper: #f1f4f5;
+  --color-surface: #e6ecec;
+  --color-line: #c7d0d2;
+  --color-accent: #ff4d1c;
+  --color-accent-ink: #4a1500;
+  --color-stamp: #d62828;
+  --color-stamp-bg: #fbe7e4;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, Consolas, monospace;
+  --font-sans: var(--font-pretendard), -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* 스펙시트 느낌의 재단선 - 관리자 화면 구분선에 공통으로 쓴다 */
+.rule-dashed {
+  border-bottom: 1px dashed var(--color-line);
 }

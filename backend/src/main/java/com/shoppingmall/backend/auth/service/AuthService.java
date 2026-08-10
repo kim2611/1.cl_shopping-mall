@@ -28,6 +28,7 @@ public class AuthService {
     // 분기하지 않는다" 원칙에 대한 의도된 예외 - 실제로는 *_code_id FK로만 참조하고, 이 상수는 그
     // FK 값을 찾기 위한 code_group+code 조회 키일 뿐이다).
     private static final String ACTIVE_STATUS_CODE = "ACST0001";
+    private static final String ADMIN_ACCOUNT_TYPE_CODE = "ACTP0001";
     private static final String GENERAL_ACCOUNT_TYPE_CODE = "ACTP0002";
     private static final String DEFAULT_GENERAL_GRADE_CODE = "GGRD0001";
 
@@ -120,15 +121,23 @@ public class AuthService {
     }
 
     private LoginResponse issueTokens(Account account) {
-        String accessToken = jwtService.issueAccessToken(account.getId(), account.getAccountTypeCodeId());
-        String refreshToken = jwtService.issueRefreshToken(account.getId(), account.getAccountTypeCodeId());
+        String role = roleOf(account);
+        String accessToken = jwtService.issueAccessToken(account.getId(), role);
+        String refreshToken = jwtService.issueRefreshToken(account.getId(), role);
 
         return LoginResponse.builder()
                 .accountId(account.getId())
                 .name(account.getName())
+                .role(role)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    /** accounts.account_type_code_id가 ACCOUNT_TYPE.관리자(ACTP0001)를 가리키면 ADMIN. */
+    private String roleOf(Account account) {
+        String adminTypeCodeId = requireCode("ACCOUNT_TYPE", ADMIN_ACCOUNT_TYPE_CODE).getId();
+        return adminTypeCodeId.equals(account.getAccountTypeCodeId()) ? "ADMIN" : "GENERAL";
     }
 
     private String activeStatusCodeId() {
