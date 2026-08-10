@@ -12,6 +12,7 @@ import com.shoppingmall.backend.account.repository.AccountRepository;
 import com.shoppingmall.backend.account.repository.GeneralAccountRepository;
 import com.shoppingmall.backend.auth.dto.LoginRequest;
 import com.shoppingmall.backend.auth.dto.LoginResponse;
+import com.shoppingmall.backend.auth.dto.MeResponse;
 import com.shoppingmall.backend.auth.dto.SignupRequest;
 import com.shoppingmall.backend.code.entity.CommonCode;
 import com.shoppingmall.backend.code.repository.CommonCodeRepository;
@@ -100,6 +101,22 @@ public class AuthService {
         generalAccountRepository.save(generalAccount);
 
         return issueTokens(account);
+    }
+
+    @Transactional(readOnly = true)
+    public MeResponse me(String accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "계정을 찾을 수 없습니다."));
+
+        String email = accountEmailRepository.findByAccountIdAndPrimaryYnAndDelYn(accountId, "Y", "N")
+                .map(AccountEmail::getEmail)
+                .orElse(null);
+
+        return MeResponse.builder()
+                .accountId(account.getId())
+                .name(account.getName())
+                .email(email)
+                .build();
     }
 
     private LoginResponse issueTokens(Account account) {

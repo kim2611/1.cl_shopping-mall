@@ -1,5 +1,6 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -51,7 +52,9 @@ export default function HomeScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <ProductCard name={item.name} price={item.price} thumbnailUrl={resolveImageUrl(item.thumbnailUrl)} />
+            <Pressable onPress={() => router.push(`/product/${item.uuid}`)}>
+              <ProductCard name={item.name} price={item.price} thumbnailUrl={resolveImageUrl(item.thumbnailUrl)} />
+            </Pressable>
           )}
         />
       </SafeAreaView>
